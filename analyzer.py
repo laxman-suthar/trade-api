@@ -9,9 +9,11 @@ settings = get_settings()
 
 # Configure Gemini once at module load
 genai.configure(api_key=settings.GEMINI_API_KEY)
-for m in genai.list_models():
-    if 'generateContent' in m.supported_generation_methods:
-        print(m.name)
+
+# checking which are models available to use in v1beta
+# for m in genai.list_models():
+#     if 'generateContent' in m.supported_generation_methods:
+#         print(m.name)
 model = genai.GenerativeModel(model_name="gemini-2.5-flash",)
 
 

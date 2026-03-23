@@ -14,6 +14,7 @@ from auth import (
 from rate_limiter import check_rate_limit, get_usage_stats
 from data_collector import collect_sector_data
 from analyzer import analyze_sector
+from session_tracking import log_request, get_session
 
 # ---------- Logging setup ----------
 logging.basicConfig(
@@ -171,7 +172,9 @@ async def analyze(
     # 5. Run Gemini analysis
     try:
         report = analyze_sector(sector_clean, market_data)
+        log_request(current_user, sector_clean, status="success")
     except RuntimeError as e:
+        log_request(current_user, sector_clean, status="failed")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(e),
@@ -206,3 +209,20 @@ async def usage(current_user: str = Depends(get_current_user)):
         "user": current_user,
         **stats,
     }
+
+
+# ---------- Session endpoint (protected) ----------
+
+@app.get(
+    "/session",
+    tags=["Session"],
+    summary="Get your current session details",
+    description="Returns your session info — when it started, which sectors you queried, total requests made.",
+)
+async def session(current_user: str = Depends(get_current_user)):
+    return {
+        "user": current_user,
+        **get_session(current_user),
+    }
+ 
+ 
