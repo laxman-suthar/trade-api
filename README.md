@@ -25,7 +25,8 @@ trade_api/
 ├── analyzer.py         # Gemini AI integration
 ├── config.py           # Settings from .env
 ├── requirements.txt
-├── .env.example
+├── .env
+├── .gitignore
 └── README.md
 ```
 
@@ -113,8 +114,10 @@ Returns a markdown report.
 |--------|----------|------|-------------|
 | GET | `/health` | No | Health check |
 | POST | `/login` | No | Get JWT token |
-| GET | `/analyze/{sector}` | Yes | Get trade report |
+| GET | `/analyze/{sector}` | Yes | Get trade report as `.md` file |
 | GET | `/usage` | Yes | Check rate limit usage |
+| GET | `/session` | Yes | View your session details |
+| GET | `/admin/sessions` | Yes | View all active sessions |
 
 ---
 
@@ -148,3 +151,48 @@ Click the **Authorize** button (lock icon), enter `Bearer <your_token>` to test 
 - 5 requests per hour per user
 - Response headers include `X-Requests-Used` and `X-Requests-Remaining`
 - Exceeding the limit returns `429 Too Many Requests`
+
+---
+
+## Session Tracking
+
+Every user session is tracked in-memory. Hit `/session` after making some requests:
+
+```json
+{
+  "user": "demo",
+  "started_at": "2026-03-23T17:28:00Z",
+  "last_active": "2026-03-23T17:35:00Z",
+  "total_requests": 3,
+  "sectors_queried": ["textiles", "pharmaceuticals"],
+  "request_log": [
+    {"sector": "textiles", "timestamp": "...", "status": "success"},
+    {"sector": "pharmaceuticals", "timestamp": "...", "status": "success"}
+  ]
+}
+```
+
+---
+
+## System Architecture
+
+```
+main.py               ← API layer (routing, auth, validation)
+    ↓
+data_collector.py     ← Data layer (DuckDuckGo search)
+    ↓
+analyzer.py           ← AI layer (Gemini analysis)
+    ↓
+session_tracker.py    ← Session layer (usage tracking)
+rate_limiter.py       ← Security layer (rate limiting)
+auth.py               ← Auth layer (JWT)
+config.py             ← Config layer (.env settings)
+```
+
+Clean separation — each layer has one responsibility and does not bleed into others.
+
+**Error handling strategy:**
+- DuckDuckGo fails → logs warning, Gemini falls back to own knowledge
+- Gemini fails → returns `500` with clear error message
+- Invalid token → returns `401`
+- Rate limit exceeded → returns `429` with `Retry-After` header
