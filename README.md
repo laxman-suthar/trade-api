@@ -57,10 +57,6 @@ pip install -r requirements.txt
 
 ### 4. Configure environment
 
-```bash
-cp .env.example .env
-```
-
 Edit `.env` and fill in:
 
 ```env
